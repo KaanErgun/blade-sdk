@@ -1,0 +1,2 @@
+#!/bin/sh
+printf 'Hello from a Blade application package.\n'

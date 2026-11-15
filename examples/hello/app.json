@@ -1,0 +1,11 @@
+{
+  "id": "dev.kaanergun.hello",
+  "version": "0.1.0-dev",
+  "name": "Hello Blade",
+  "entrypoint": "bin/hello",
+  "entrypoint_type": "script",
+  "license": "MIT",
+  "source": "https://github.com/KaanErgun/blade-sdk",
+  "permissions": [],
+  "run_as": "app"
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blade-sdk:manifest:1",
+  "title": "Blade application package manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "target", "id", "version", "name", "entrypoint", "entrypoint_type", "license", "source", "permissions", "run_as", "signer", "files"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "blade-app"},
+    "target": {"const": "linux-aarch64"},
+    "id": {"type": "string", "maxLength": 96, "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)+$"},
+    "version": {"type": "string", "minLength": 5, "maxLength": 64, "description": "SemVer without a v prefix; the CLI checks prerelease identifiers."},
+    "name": {"type": "string", "minLength": 1, "maxLength": 96},
+    "entrypoint": {"$ref": "#/$defs/path"},
+    "entrypoint_type": {"enum": ["script", "elf"]},
+    "license": {"type": "string", "minLength": 1, "maxLength": 128},
+    "source": {"type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^https?://", "description": "HTTP(S) source URL without credentials, query or fragment."},
+    "permissions": {"type": "array", "uniqueItems": true, "items": {"enum": ["camera", "hud", "microphone", "network", "root", "storage"]}},
+    "run_as": {"enum": ["app", "root"]},
+    "signer": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA256 of the trusted Ed25519 SubjectPublicKeyInfo DER."},
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 512,
+      "propertyNames": {"$ref": "#/$defs/path"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bytes", "sha256", "mode"],
+        "properties": {
+          "bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "mode": {"enum": [292, 365]}
+        }
+      }
+    }
+  },
+  "allOf": [{
+    "if": {"properties": {"run_as": {"const": "root"}}},
+    "then": {"properties": {"permissions": {"contains": {"const": "root"}}}},
+    "else": {"properties": {"permissions": {"not": {"contains": {"const": "root"}}}}}
+  }],
+  "$defs": {
+    "path": {"type": "string", "minLength": 1, "maxLength": 240, "pattern": "^[A-Za-z0-9_][A-Za-z0-9_./-]*$", "description": "Relative ASCII POSIX path. CLI also rejects empty/dot/dot-dot components, file/directory conflicts, and case collisions."}
+  },
+  "$comment": "The schema describes wire structure. CLI verification additionally enforces canonical JSON, aggregate byte limits, archive structure, entrypoint content, all file hashes, and the external trust key. Schema validation alone is not package verification."
+}
