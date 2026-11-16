@@ -17,7 +17,9 @@ class ProtocolFixtureTests(unittest.TestCase):
                 key, value = line.split('=', 1)
                 self.assertNotIn(key, values)
                 values[key] = value
-        self.assertEqual(len(values), 46)
+        self.assertEqual(len(values), 49)
+        for name, milliseconds in (('LIFE', 300000), ('IDLE', 15000), ('REVIEW', 120000)):
+            self.assertEqual(values['market.UPLOAD_' + name + '_MS'], str(milliseconds))
         header = (ROOT / 'native/package.h').read_text()
         for name in ('HUD', 'NETWORK', 'STORAGE'):
             match = re.search(r'^#define BP_' + name + r' (\d+)u$', header, re.M)

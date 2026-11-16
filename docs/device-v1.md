@@ -131,9 +131,12 @@ keep running after the phone disconnects. No mutation is automatically retried.
 
 The package limit is 64 MiB, CHUNK payload limit 65560 bytes. One upload belongs
 to its management connection; offsets must be exact. Its absolute lifetime is
-300 seconds and idle limit 15 seconds. Only upload progress renews idle time;
-STATUS does not. FINISH validates size/hash and the native signature, then renews
-idle time. A single native operation has a 30-second deadline; clients may allow
+300 seconds and transfer idle limit 15 seconds. Only upload progress renews
+transfer idle time. Successful FINISH validates size/hash and the native signature,
+then starts a 120-second confirmation window, capped by the original 300-second
+lifetime. STATUS and other reads never extend either deadline. The authenticated
+management connection may wait for confirmation only while its verified upload
+remains valid. A single native operation has a 30-second deadline; clients may allow
 35 seconds for its reply. An expired preview requires explicit reselection/upload.
 Connection loss cleans staging, not an already committed install. After an
 uncertain mutation reply, query STATUS instead of repeating the operation.
