@@ -80,7 +80,7 @@ control connection and a separate authenticated subscriber connection.
 | Type | Request body | Success body after status |
 |---|---|---|
 | 2 STATUS | empty | JSON, at most 4092 bytes |
-| 3 START | seconds:u32 (1..1800) | session[16] |
+| 3 START | seconds:u32 (1..1800) [, profile:u32] | session[16] |
 | 4 STOP | session[16] | empty |
 | 5 SUBSCRIBE | session[16] | empty, then FRAME/END pushes |
 | 6 FREEZE | session[16], frame_id:u64 | empty |
@@ -91,7 +91,7 @@ control connection and a separate authenticated subscriber connection.
 | 11 PING | session[16] or empty | empty |
 
 FRAME type `0x9001` is session[16], frame_id:u64, capture_monotonic_ns:u64,
-width:u16, height:u16, jpeg_bytes:u32, JPEG. Initial geometry is 640×480.
+width:u16, height:u16, jpeg_bytes:u32, JPEG. Width and height are the session profile's.
 Frame IDs strictly increase in one session; Blade monotonic time is not a phone
 wall clock and does not establish optical latency. END `0x9002` contains
 session[16], reason:u32 (0 stop, 1 deadline, 2 control lost, 3 camera error,
@@ -105,8 +105,25 @@ retained frame or returns stale; TEXT/ARROW require that frozen ID. Coordinates
 are 0..65535 across the uncropped image, excluding letterbox margins. RESUME
 removes annotations. PHOTO reuses the latest JPEG and does not capture secretly.
 
+START carries 4 bytes (seconds; profile 0) or 8 bytes (seconds, then profile).
+Send the 4-byte form for profile 0, so older OS versions keep working. Profiles:
+
+| Profile | FRAME | At most | JPEG quality |
+|---:|---|---|---|
+| 0 | 640×480 | 30 FPS | 75 |
+| 1 (HD) | 1280×960 | 10 FPS | 70 |
+
+Both keep the sensor's full 4:3 field of view. An unknown profile is answered with
+status 2 (invalid) and starts nothing; any other START length closes the connection.
+Blade paces HD itself: frames it does not read are dropped on the device, so HD
+frame-ID gaps are expected. The 1 MiB JPEG limit applies to both profiles. These are
+protocol limits, not measured Blade frame rates.
+
 STATUS JSON keys: `protocol`, `os_version`, `camera_available`, `session_active`,
-`frame_width`, `frame_height`.
+`frame_width`, `frame_height` (the live session's profile, otherwise 640×480) and
+`profiles`, an array of `[width, height, max_fps]` indexed by profile ID, currently
+`[[640,480,30],[1280,960,10]]`. Without `profiles` the device supports profile 0
+only; do not send the 8-byte START form to it.
 
 ## Owner application management role
 
@@ -163,8 +180,9 @@ constant and packet fixture. Tokens/session IDs in it are synthetic. OS C and
 Android tests compare their actual serializers/constants against these exact
 bytes; the Android test-resource copy must be byte-identical. A future iOS
 implementation must use this same fixture before claiming protocol compatibility.
-The fixture does not replace lifecycle, credential, malformed-input or hardware
-tests. OS implementation references are `userspace/companion/protocol.{h,c}` and
+Profile IDs, geometry and maximum rates are `camera.PROFILE_*`, `camera.VGA_*`
+and `camera.HD_*`; `wire.START_HD` is the 8-byte START form. The fixture does not
+replace lifecycle, credential, malformed-input or hardware tests. OS implementation references are `userspace/companion/protocol.{h,c}` and
 `docs/{companion,market}-protocol.md`; incompatible changes require a deliberate
 protocol/version decision across all consumers.
 

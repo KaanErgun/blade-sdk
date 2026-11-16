@@ -17,7 +17,7 @@ class ProtocolFixtureTests(unittest.TestCase):
                 key, value = line.split('=', 1)
                 self.assertNotIn(key, values)
                 values[key] = value
-        self.assertEqual(len(values), 49)
+        self.assertEqual(len(values), 58)
         for name, milliseconds in (('LIFE', 300000), ('IDLE', 15000), ('REVIEW', 120000)):
             self.assertEqual(values['market.UPLOAD_' + name + '_MS'], str(milliseconds))
         header = (ROOT / 'native/package.h').read_text()
@@ -25,8 +25,8 @@ class ProtocolFixtureTests(unittest.TestCase):
             match = re.search(r'^#define BP_' + name + r' (\d+)u$', header, re.M)
             self.assertIsNotNone(match)
             self.assertEqual(values['market.' + name], match[1])
-        names = ('START', 'TEXT', 'ARROW', 'AUTH_MANAGEMENT', 'UPLOAD_CHUNK', 'INSTALL', 'ACTION')
-        types = (3, 7, 8, 20, 34, 37, 38)
+        names = ('START', 'TEXT', 'ARROW', 'AUTH_MANAGEMENT', 'UPLOAD_CHUNK', 'INSTALL', 'ACTION', 'START_HD')
+        types = (3, 7, 8, 20, 34, 37, 38, 3)
         for index, (name, kind) in enumerate(zip(names, types)):
             encoded = values['wire.' + name]
             self.assertRegex(encoded, r'^[0-9a-f]+$')
@@ -36,6 +36,14 @@ class ProtocolFixtureTests(unittest.TestCase):
         text = bytes.fromhex(values['wire.TEXT'])[16:]
         self.assertEqual(int.from_bytes(text[24:26], 'big'), len(text[26:]))
         self.assertEqual(text[26:].decode('utf8'), 'Yön')
+        # START is duration[, profile]; the four-byte form remains profile 0 (VGA).
+        self.assertEqual(struct.unpack('>I', bytes.fromhex(values['wire.START'])[16:]), (60,))
+        self.assertEqual(struct.unpack('>II', bytes.fromhex(values['wire.START_HD'])[16:]),
+                         (60, int(values['camera.PROFILE_HD'])))
+        profiles = [tuple(int(values['camera.%s_%s' % (name, field)]) for field in ('WIDTH', 'HEIGHT', 'FPS'))
+                    for name in ('VGA', 'HD')]
+        self.assertEqual(profiles, [(640, 480, 30), (1280, 960, 10)])
+        self.assertEqual((values['camera.PROFILE_VGA'], values['camera.PROFILE_HD']), ('0', '1'))
         install = bytes.fromhex(values['wire.INSTALL'])[16:]
         self.assertEqual(int.from_bytes(install[16:20], 'big'), 4 | 8 | 16)
         self.assertEqual(install[20:], bytes(range(64, 96)))
