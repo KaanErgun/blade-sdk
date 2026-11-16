@@ -1,2 +1,2 @@
 #!/bin/sh
-printf 'Hello from a Blade application package.\n'
+/bin/busybox cat /app/text/tr.txt

@@ -6,6 +6,8 @@
   "entrypoint_type": "script",
   "license": "MIT",
   "source": "https://github.com/KaanErgun/blade-sdk",
-  "permissions": [],
+  "permissions": [
+    "hud"
+  ],
   "run_as": "app"
 }

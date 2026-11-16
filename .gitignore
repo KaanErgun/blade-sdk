@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 .keys/
 *.pem
+# The signed catalog fixture needs its public verification key in a clean checkout.
+!tests/fixtures/catalog-publisher.pem
 *.key
 *.bladeapp
 build/

@@ -1,0 +1,3 @@
+Merhaba, Blade.
+Bu metin kurduğun uygulamadan geldi.
+Geri dönmek için iki parmakla dokun.
